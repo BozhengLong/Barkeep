@@ -4,6 +4,15 @@ A macOS 26 (Tahoe)-only menu-bar manager, forked from [Ice](https://github.com/j
 
 Goal: be *more stable on the newest macOS* than Bartender.
 
+## Download
+Grab **Barkeep-v0.1.0-macos.zip** from [Releases](https://github.com/BozhengLong/Barkeep/releases/latest), unzip, and move `Barkeep.app` to `/Applications`.
+
+Barkeep is **ad-hoc signed, not Apple-notarized**, so macOS Gatekeeper blocks the first launch. Bypass it once:
+- Right-click `Barkeep.app` → **Open** → **Open** in the dialog, **or**
+- `xattr -dr com.apple.quarantine /Applications/Barkeep.app`
+
+Then grant **Accessibility** + **Screen Recording** in System Settings → Privacy & Security, and relaunch (Screen Recording only takes effect on the next launch). Prefer to build it yourself? See **Build** below.
+
 ## Known limitations
 macOS 26 (Tahoe) renders the whole menu bar through a single system process
 (Control Center), so every item — including third-party ones — reports the same

@@ -2,9 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Auto-update disabled for this fork. Do NOT point at Ice's appcast/key,
+	     or Barkeep would update itself into Ice. Barkeep will add its own feed +
+	     Ed25519 key here if/when it hosts signed updates. -->
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
 	<key>SUFeedURL</key>
-	<string>https://jordanbaird.github.io/ice-releases/appcast.xml</string>
-	<key>SUPublicEDKey</key>
-	<string>3nfIGMOD8DALPE8vIdFo2tUOIVc2MVbzhc+2J9JLn+Q=</string>
+	<string>https://bozhenglong.github.io/Barkeep/appcast.xml</string>
 </dict>
 </plist>
