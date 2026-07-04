@@ -227,15 +227,10 @@ struct GeneralSettingsPane: View {
     @ViewBuilder
     private var spacingOptions: some View {
         IceLabeledContent {
-            IceSlider(
-                localizedOffsetString(for: tempItemSpacingOffset),
-                value: $tempItemSpacingOffset,
-                in: -16...16,
-                step: 2
-            )
-            .disabled(isApplyingOffset)
-        } label: {
-            IceLabeledContent {
+            // The Apply and reset buttons must live on the content side: on
+            // macOS 26, views inside LabeledContent's label don't receive
+            // clicks, which left the buttons visually enabled but inert.
+            HStack(spacing: 8) {
                 Button("Apply") {
                     applyOffset()
                 }
@@ -257,11 +252,19 @@ struct GeneralSettingsPane: View {
                     .help("Reset to the default spacing")
                     .disabled(isApplyingOffset || !isActualOffsetDifferentFromDefault)
                 }
-            } label: {
-                HStack {
-                    Text("Menu bar item spacing")
-                    BetaBadge()
-                }
+
+                IceSlider(
+                    localizedOffsetString(for: tempItemSpacingOffset),
+                    value: $tempItemSpacingOffset,
+                    in: -16...16,
+                    step: 2
+                )
+                .disabled(isApplyingOffset)
+            }
+        } label: {
+            HStack {
+                Text("Menu bar item spacing")
+                BetaBadge()
             }
         }
         .annotation(
@@ -324,6 +327,7 @@ struct GeneralSettingsPane: View {
 
     /// Apply menu bar spacing offset.
     private func applyOffset() {
+        LayoutDiagnostics.appendText("[spacing] applyOffset invoked, offset=\(tempItemSpacingOffset)")
         isApplyingOffset = true
         manager.itemSpacingOffset = tempItemSpacingOffset
         Task {

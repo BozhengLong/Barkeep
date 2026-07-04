@@ -210,10 +210,14 @@ final class MenuBarItemManager: ObservableObject {
             }
             .store(in: &c)
 
-        Publishers.Merge(
-            UniversalEventMonitor.publisher(for: mouseTrackingMask),
-            RunLoopLocalEventMonitor.publisher(for: mouseTrackingMask, mode: .eventTracking)
-        )
+        // No RunLoopLocalEventMonitor here: its dequeue-and-repost of ALL
+        // pending events during the eventTracking runloop mode breaks SwiftUI
+        // Button clicks app-wide on macOS 26 (hover works, clicks never
+        // complete — user-verified 2026-07-05). The global half of
+        // UniversalEventMonitor still observes menu bar drags, which happen in
+        // other processes; the only loss is mouse-state tracking during drags
+        // inside Barkeep's own windows.
+        UniversalEventMonitor.publisher(for: mouseTrackingMask)
         .removeDuplicates()
         .sink { [weak self] event in
             guard let self else {
@@ -559,10 +563,9 @@ extension MenuBarItemManager {
             var cancellable: AnyCancellable?
 
             await withCheckedContinuation { continuation in
-                cancellable = Publishers.Merge(
-                    UniversalEventMonitor.publisher(for: .flagsChanged),
-                    RunLoopLocalEventMonitor.publisher(for: .flagsChanged, mode: .eventTracking)
-                )
+                // No RunLoopLocalEventMonitor: see the mouse-tracking observer
+                // in configureCancellables — it breaks Button clicks on macOS 26.
+                cancellable = UniversalEventMonitor.publisher(for: .flagsChanged)
                 .removeDuplicates()
                 .sink { _ in
                     if NSEvent.modifierFlags.isEmpty {
@@ -932,7 +935,10 @@ extension MenuBarItemManager {
             return
         }
         try await scrombleEvent(event, from: firstLocation, to: secondLocation, item: item)
-        try await waitForFrameChange(of: item, initialFrame: currentFrame, timeout: .milliseconds(50))
+        // 500ms rather than 50ms: Control Center on macOS 26 batches menu bar
+        // layout, and frame changes regularly land after 50ms. The wait polls,
+        // so successful moves return as soon as the frame actually changes.
+        try await waitForFrameChange(of: item, initialFrame: currentFrame, timeout: .milliseconds(500))
     }
 
     /// Waits for a menu bar item's frame to change from an initial frame.
@@ -1048,30 +1054,14 @@ extension MenuBarItemManager {
         }
 
         let startPoint = CGPoint(x: 20_000, y: 20_000)
-        let endPoint = try getEndPoint(for: destination)
         let fallbackPoint = try getFallbackPoint(for: item)
         let targetItem = getTargetItem(for: destination)
-
-        if LayoutDiagnostics.isEnabled {
-            let itemFrame = Bridging.getWindowFrame(for: item.windowID)
-            let targetFrame = Bridging.getWindowFrame(for: targetItem.windowID)
-            LayoutDiagnostics.appendText(
-                "[move-release] item wid=\(item.windowID) at \(itemFrame.map(String.init(describing:)) ?? "<nil>") | target wid=\(targetItem.windowID) at \(targetFrame.map(String.init(describing:)) ?? "<nil>") | releasing at \(endPoint)"
-            )
-        }
 
         guard
             let mouseDownEvent = CGEvent.menuBarItemEvent(
                 type: .move(.leftMouseDown),
                 location: startPoint,
                 item: item,
-                pid: item.ownerPID,
-                source: source
-            ),
-            let mouseUpEvent = CGEvent.menuBarItemEvent(
-                type: .move(.leftMouseUp),
-                location: endPoint,
-                item: targetItem,
                 pid: item.ownerPID,
                 source: source
             ),
@@ -1105,6 +1095,31 @@ extension MenuBarItemManager {
                 to: .sessionEventTap,
                 waitingForFrameChangeOf: item
             )
+
+            // Compute the release point only AFTER the pickup: picking the item
+            // up reflows the whole bar on macOS 26 (the section divider resizes
+            // for cross-section moves), so a pre-pickup release point is stale
+            // and drops the item one slot off — visible as items landing on the
+            // wrong side of the target and hopping into place on retry.
+            let endPoint = try getEndPoint(for: destination)
+            if LayoutDiagnostics.isEnabled {
+                let targetFrame = Bridging.getWindowFrame(for: targetItem.windowID)
+                LayoutDiagnostics.appendText(
+                    "[move-release] item wid=\(item.windowID) | target wid=\(targetItem.windowID) at \(targetFrame.map(String.init(describing:)) ?? "<nil>") | releasing at \(endPoint) (post-pickup)"
+                )
+            }
+            guard
+                let mouseUpEvent = CGEvent.menuBarItemEvent(
+                    type: .move(.leftMouseUp),
+                    location: endPoint,
+                    item: targetItem,
+                    pid: item.ownerPID,
+                    source: source
+                )
+            else {
+                throw EventError(code: .eventCreationFailure, item: item)
+            }
+
             try await scrombleEvent(
                 mouseUpEvent,
                 from: .pid(item.ownerPID),
