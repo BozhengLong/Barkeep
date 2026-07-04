@@ -19,7 +19,13 @@ extension View {
             // is drawn opaquely on top of this base, hiding it.
             ZStack {
                 Color(white: 0.13)
-                if appState.isActiveSpaceFullscreen {
+                if #available(macOS 26.0, *) {
+                    // On Tahoe, captured item images are always white template
+                    // glyphs regardless of the sampled menu bar color, so any
+                    // light background renders the layout bar unreadable. Keep
+                    // the dark base unconditionally.
+                    EmptyView()
+                } else if appState.isActiveSpaceFullscreen {
                     Color.black
                 } else if let averageColorInfo {
                     switch averageColorInfo.source {
@@ -31,21 +37,12 @@ extension View {
                                     .blendMode(.softLight)
                             )
                     case .desktopWallpaper:
-                        // On macOS 26 the menu bar is a dark translucent overlay
-                        // and does not show the wallpaper color directly — icons
-                        // are white template glyphs, so painting the (often light)
-                        // wallpaper average behind them renders them invisible.
-                        // Keep the dark base instead.
-                        if #available(macOS 26.0, *) {
-                            EmptyView()
-                        } else {
-                            Color(cgColor: averageColorInfo.color)
-                                .overlay(
-                                    Material.bar
-                                        .opacity(0.5)
-                                        .blendMode(.softLight)
-                                )
-                        }
+                        Color(cgColor: averageColorInfo.color)
+                            .overlay(
+                                Material.bar
+                                    .opacity(0.5)
+                                    .blendMode(.softLight)
+                            )
                     }
                 } else {
                     Color.defaultLayoutBar

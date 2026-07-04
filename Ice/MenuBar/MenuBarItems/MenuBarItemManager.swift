@@ -69,6 +69,10 @@ final class MenuBarItemManager: ObservableObject {
 
     /// Context for a temporarily shown menu bar item.
     private struct TempShownItemContext {
+        /// The identifier of the item's window. Used as the item's identity:
+        /// `info` collides on Tahoe, where many items are "Item-0".
+        let windowID: CGWindowID
+
         /// The information associated with the item.
         let info: MenuBarItemInfo
 
@@ -255,7 +259,7 @@ extension MenuBarItemManager {
         var tempShownItems = [(MenuBarItem, MoveDestination)]()
 
         for item in otherItems {
-            if let context = tempShownItemContexts.first(where: { $0.info == item.info }) {
+            if let context = tempShownItemContexts.first(where: { $0.windowID == item.windowID }) {
                 // Keep track of temporarily shown items and their return destinations separately.
                 // We want to cache them as if they were in their original locations. Once all other
                 // items are cached, use the return destinations to insert the items into the cache
@@ -1194,21 +1198,32 @@ extension MenuBarItemManager {
         defer {
             itemMoveCount -= 1
         }
-        try await move(item: item, to: destination)
-        let waitTask = Task(timeout: timeout) {
-            while true {
-                try Task.checkCancellation()
-                if try await self.itemHasCorrectPosition(item: item, for: destination) {
-                    return
+        // Cross-section moves reflow the whole bar mid-gesture on Tahoe, which
+        // can invalidate the release coordinates and drop the item one slot
+        // off. Retrying recomputes the drop point from fresh frames, so a
+        // short retry loop converges instead of failing.
+        let maxAttempts = 3
+        for attempt in 1...maxAttempts {
+            try await move(item: item, to: destination)
+            let waitTask = Task(timeout: timeout) {
+                while true {
+                    try Task.checkCancellation()
+                    if try await self.itemHasCorrectPosition(item: item, for: destination) {
+                        return
+                    }
                 }
             }
-        }
-        do {
-            try await waitTask.value
-            LayoutDiagnostics.appendText("[slowMove-ok] item wid=\(item.windowID) verified at destination")
-        } catch is TaskTimeoutError {
-            logSlowMoveTimeoutEvidence(item: item, destination: destination)
-            throw EventError(code: .otherTimeout, item: item)
+            do {
+                try await waitTask.value
+                LayoutDiagnostics.appendText("[slowMove-ok] item wid=\(item.windowID) verified at destination (attempt \(attempt))")
+                return
+            } catch is TaskTimeoutError {
+                guard attempt < maxAttempts else {
+                    logSlowMoveTimeoutEvidence(item: item, destination: destination)
+                    throw EventError(code: .otherTimeout, item: item)
+                }
+                LayoutDiagnostics.appendText("[slowMove-retry] item wid=\(item.windowID) attempt \(attempt) failed verification, retrying")
+            }
         }
     }
 
@@ -1345,8 +1360,7 @@ extension MenuBarItemManager {
 extension MenuBarItemManager {
     /// Gets the destination to return the given item to after it is temporarily shown.
     private func getReturnDestination(for item: MenuBarItem, in items: [MenuBarItem]) -> MoveDestination? {
-        let info = item.info
-        if let index = items.firstIndex(where: { $0.info == info }) {
+        if let index = items.firstIndex(where: { $0.windowID == item.windowID }) {
             if items.indices.contains(index + 1) {
                 return .leftOfItem(items[index + 1])
             } else if items.indices.contains(index - 1) {
@@ -1390,6 +1404,7 @@ extension MenuBarItemManager {
             latest.isOnScreen
         {
             if clickWhenFinished {
+                LayoutDiagnostics.appendText("[tempShow] wid=\(item.windowID) isOnScreen=true at \(latest.frame) — click-only path")
                 Task {
                     do {
                         try await click(item: latest, with: mouseButton)
@@ -1472,6 +1487,7 @@ extension MenuBarItemManager {
             }
 
             let context = TempShownItemContext(
+                windowID: item.windowID,
                 info: item.info,
                 returnDestination: destination,
                 shownInterfaceWindow: shownInterfaceWindow
@@ -1519,13 +1535,16 @@ extension MenuBarItemManager {
         }
 
         while let context = tempShownItemContexts.popLast() {
-            guard let item = items.first(where: { $0.info == context.info }) else {
+            guard let item = items.first(where: { $0.windowID == context.windowID }) else {
+                LayoutDiagnostics.appendText("[rehide] wid=\(context.windowID) no longer present — dropping context")
                 continue
             }
             do {
                 try await move(item: item, to: context.returnDestination)
+                LayoutDiagnostics.appendText("[rehide] wid=\(context.windowID) returned to original section")
             } catch {
                 Logger.itemManager.error("Failed to rehide \(item.logString) (error: \(error))")
+                LayoutDiagnostics.appendText("[rehide] wid=\(context.windowID) FAILED: \(error)")
                 failedContexts.append(context)
             }
         }
@@ -1543,8 +1562,8 @@ extension MenuBarItemManager {
     /// Removes a temporarily shown item from the cache.
     ///
     /// This ensures that the item will _not_ be returned to its previous location.
-    func removeTempShownItemFromCache(with info: MenuBarItemInfo) {
-        tempShownItemContexts.removeAll { $0.info == info }
+    func removeTempShownItemFromCache(with windowID: CGWindowID) {
+        tempShownItemContexts.removeAll { $0.windowID == windowID }
     }
 }
 

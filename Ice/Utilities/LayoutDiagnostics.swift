@@ -74,6 +74,13 @@ enum LayoutDiagnostics {
             ))
         }
 
+        // Average menu bar color as sampled (drives layout/Ice Bar backgrounds).
+        if let colorInfo = appState.menuBarManager.averageColorInfo {
+            lines.append("averageColorInfo: source=\(colorInfo.source) color=\(colorInfo.color.components ?? [])")
+        } else {
+            lines.append("averageColorInfo: <nil>")
+        }
+
         // Control item preferred positions as stored in defaults.
         for identifier in ControlItem.Identifier.allCases {
             let position: CGFloat? = StatusItemDefaults[.preferredPosition, identifier.rawValue]

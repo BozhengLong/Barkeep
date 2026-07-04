@@ -31,7 +31,17 @@ struct MenuBarItemInfo: Hashable, CustomStringConvertible {
 // MARK: MenuBarItemInfo Constants
 extension MenuBarItemInfo {
     /// An array of items whose movement is prevented by macOS.
-    static let immovableItems = [clock, siri, controlCenter]
+    ///
+    /// On macOS 26 (Tahoe) the same items report different identities: the
+    /// Control Center item is titled "BentoBox-0" instead of "BentoBox", and
+    /// Siri is owned by Control Center instead of the System UI Server.
+    static let immovableItems = [
+        clock,
+        siri,
+        controlCenter,
+        MenuBarItemInfo(namespace: .controlCenter, title: "BentoBox-0"),
+        MenuBarItemInfo(namespace: .controlCenter, title: "Siri"),
+    ]
 
     /// An array of items that can be moved, but cannot be hidden.
     static let nonHideableItems = [audioVideoModule, faceTime, musicRecognition]
