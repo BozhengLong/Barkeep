@@ -603,7 +603,10 @@ extension MenuBarItemManager {
             guard let currentFrame = getCurrentFrame(for: targetItem) else {
                 throw EventError(code: .invalidItem, item: targetItem)
             }
-            return CGPoint(x: currentFrame.minX, y: currentFrame.midY)
+            // DEBUG PROBE (Tahoe insertion boundary): releasing at exactly minX
+            // lands the item on the target's RIGHT on macOS 26. Testing whether
+            // a 1px-left release flips it to the correct side.
+            return CGPoint(x: currentFrame.minX - 1, y: currentFrame.midY)
         case .rightOfItem(let targetItem):
             guard let currentFrame = getCurrentFrame(for: targetItem) else {
                 throw EventError(code: .invalidItem, item: targetItem)
@@ -1160,6 +1163,7 @@ extension MenuBarItemManager {
         }
         do {
             try await waitTask.value
+            LayoutDiagnostics.appendText("[slowMove-ok] item wid=\(item.windowID) verified at destination")
         } catch is TaskTimeoutError {
             logSlowMoveTimeoutEvidence(item: item, destination: destination)
             throw EventError(code: .otherTimeout, item: item)
