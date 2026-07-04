@@ -443,7 +443,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.11.12;
+				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.spidey0o0zheng.Barkeep;
 				PRODUCT_MODULE_NAME = Ice;
 				PRODUCT_NAME = Barkeep;
@@ -477,7 +477,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.11.12;
+				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.spidey0o0zheng.Barkeep;
 				PRODUCT_MODULE_NAME = Ice;
 				PRODUCT_NAME = Barkeep;
