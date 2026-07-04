@@ -1,5 +1,13 @@
 # Phase 0 Findings — Per-Item Persistence Diagnostics
 
+> **FINAL OUTCOME (2026-07-05):** The snapshot/restore system (plan Tasks 3-7)
+> was NOT built — YAGNI. After fixing the within-session bugs below (drop-point
+> boundary, temp-show identity, immovable renames, layout bar contrast), the
+> user verified hidden state survives multiple clean-quit → relaunch cycles
+> intact. The perceived "persistence" problem was a chain reaction of session
+> bugs, not actual cross-restart state loss. See the running bug list in
+> `.context/HANDOFF.md` and commits `7ee82fa`, `ee4cf23`, `7ddaf9c`, `b3938e9`.
+
 _Date: 2026-07-04 · Data: /tmp/barkeep_diag.txt (two sessions, one clean quit + relaunch cycle) · Hardware: macOS 26 Tahoe, Control Center pid 766_
 
 ## The three Phase 0 questions

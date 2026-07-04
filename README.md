@@ -16,13 +16,13 @@ Then grant **Accessibility** + **Screen Recording** in System Settings → Priva
 ## Known limitations
 macOS 26 (Tahoe) renders the whole menu bar through a single system process
 (Control Center), so every item — including third-party ones — reports the same
-owner and often no distinct title. Barkeep works around this to hide/show items
-and to render the bar with correct icons, but **per-item state may not persist
-reliably across app restarts**: it can't always tell two otherwise-identical
-third-party items apart by identity. Hiding and showing work within a session;
-remembering exactly which items were hidden across relaunches is not fully solved
-yet. (This is the same hard problem that led Bartender to add a dedicated helper
-process on Tahoe.)
+owner and often no distinct title (`Item-0`). Barkeep works around this: items
+are tracked by window identity within a session, drag/hide/show and the Layout
+pane work, and hidden state survives app restarts (macOS itself restores item
+positions). Remaining cosmetic limitation: **hover tooltips in the Layout pane
+show "Item-0"** for items whose real app name isn't exposed by the system.
+(This identity collapse is the same hard problem that led Bartender to add a
+dedicated helper process on Tahoe.)
 
 ## Requirements
 - macOS 26 (Tahoe), Xcode 26+, Apple Silicon.
