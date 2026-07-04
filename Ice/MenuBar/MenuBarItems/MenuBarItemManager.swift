@@ -1161,7 +1161,45 @@ extension MenuBarItemManager {
         do {
             try await waitTask.value
         } catch is TaskTimeoutError {
+            logSlowMoveTimeoutEvidence(item: item, destination: destination)
             throw EventError(code: .otherTimeout, item: item)
+        }
+    }
+
+    /// Diagnostic evidence gathering for slowMove verification timeouts: logs
+    /// high-precision frames of the item and target at timeout, +1s, and +3s,
+    /// to distinguish sub-pixel mismatch from animation-lag from never-adjacent.
+    private func logSlowMoveTimeoutEvidence(item: MenuBarItem, destination: MoveDestination) {
+        guard LayoutDiagnostics.isEnabled else {
+            return
+        }
+        let target = getTargetItem(for: destination)
+        let expectation = switch destination {
+        case .leftOfItem: "item.maxX == target.minX"
+        case .rightOfItem: "item.minX == target.maxX"
+        }
+        func sample(_ label: String) {
+            let itemFrame = Bridging.getWindowFrame(for: item.windowID)
+            let targetFrame = Bridging.getWindowFrame(for: target.windowID)
+            func fmt(_ frame: CGRect?) -> String {
+                guard let frame else {
+                    return "<nil>"
+                }
+                return String(
+                    format: "(%.4f, %.4f, %.4f x %.4f) minX=%.4f maxX=%.4f",
+                    frame.origin.x, frame.origin.y, frame.width, frame.height, frame.minX, frame.maxX
+                )
+            }
+            LayoutDiagnostics.appendText(
+                "[slowMove-timeout \(label)] item wid=\(item.windowID) \(fmt(itemFrame)) | target wid=\(target.windowID) \(fmt(targetFrame)) | expect \(expectation)"
+            )
+        }
+        sample("t+0s")
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            sample("t+1s")
+            try? await Task.sleep(for: .seconds(2))
+            sample("t+3s")
         }
     }
 }
