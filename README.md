@@ -4,6 +4,17 @@ A macOS 26 (Tahoe)-only menu-bar manager, forked from [Ice](https://github.com/j
 
 Goal: be *more stable on the newest macOS* than Bartender.
 
+## Known limitations
+macOS 26 (Tahoe) renders the whole menu bar through a single system process
+(Control Center), so every item — including third-party ones — reports the same
+owner and often no distinct title. Barkeep works around this to hide/show items
+and to render the bar with correct icons, but **per-item state may not persist
+reliably across app restarts**: it can't always tell two otherwise-identical
+third-party items apart by identity. Hiding and showing work within a session;
+remembering exactly which items were hidden across relaunches is not fully solved
+yet. (This is the same hard problem that led Bartender to add a dedicated helper
+process on Tahoe.)
+
 ## Requirements
 - macOS 26 (Tahoe), Xcode 26+, Apple Silicon.
 
@@ -34,7 +45,7 @@ and relaunch.
   (the seed of the P1 stability harness).
 
 ## Notes
-- Internal Xcode target/scheme stays named "Ice"; only the bundle id
-  (`com.spidey0o0zheng.Barkeep`) is changed so far. Display rename (`PRODUCT_NAME`)
-  and the deployment-target bump to 26.0 are deferred (see the design doc / P0 plan).
+- Internal Xcode target/scheme stays named "Ice"; the product name is Barkeep and
+  the bundle id is `com.spidey0o0zheng.Barkeep`. Deployment target stays macOS 14
+  (the legacy window-capture API Barkeep relies on is unavailable when targeting 26).
 - Forked from Ice by Jordan Baird. See `NOTICE.md`.
