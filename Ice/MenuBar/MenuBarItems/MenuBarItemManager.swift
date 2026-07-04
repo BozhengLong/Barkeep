@@ -652,13 +652,45 @@ extension MenuBarItemManager {
             guard let currentTargetFrame = getCurrentFrame(for: targetItem) else {
                 throw EventError(code: .invalidItem, item: targetItem)
             }
-            return currentFrame.maxX == currentTargetFrame.minX
+            if currentFrame.maxX == currentTargetFrame.minX {
+                return true
+            }
+            // macOS may pin immovable items (e.g. BentoBox glued to Clock)
+            // between the moved item and its target, making exact adjacency
+            // unsatisfiable. Accept the position if everything in the gap
+            // is immovable.
+            return currentFrame.maxX < currentTargetFrame.minX && gapContainsOnlyImmovableItems(
+                from: currentFrame.maxX, to: currentTargetFrame.minX
+            )
         case .rightOfItem(let targetItem):
             guard let currentTargetFrame = getCurrentFrame(for: targetItem) else {
                 throw EventError(code: .invalidItem, item: targetItem)
             }
-            return currentFrame.minX == currentTargetFrame.maxX
+            if currentFrame.minX == currentTargetFrame.maxX {
+                return true
+            }
+            return currentFrame.minX > currentTargetFrame.maxX && gapContainsOnlyImmovableItems(
+                from: currentTargetFrame.maxX, to: currentFrame.minX
+            )
         }
+    }
+
+    /// Returns whether the horizontal span between the given x positions is
+    /// fully covered by immovable menu bar items (and nothing else).
+    private func gapContainsOnlyImmovableItems(from minX: CGFloat, to maxX: CGFloat) -> Bool {
+        guard maxX > minX else {
+            return false
+        }
+        let items = MenuBarItem.getMenuBarItems(onScreenOnly: false, activeSpaceOnly: true)
+        let gapItems = items.filter { other in
+            other.frame.minX >= minX && other.frame.maxX <= maxX
+        }
+        guard !gapItems.isEmpty else {
+            return false
+        }
+        // The gap must be exactly tiled by immovable items.
+        let coveredWidth = gapItems.reduce(0) { $0 + $1.frame.width }
+        return gapItems.allSatisfy { !$0.isMovable } && coveredWidth == maxX - minX
     }
 
     /// Returns a Boolean value that indicates whether the given events have the
@@ -1007,6 +1039,14 @@ extension MenuBarItemManager {
         let endPoint = try getEndPoint(for: destination)
         let fallbackPoint = try getFallbackPoint(for: item)
         let targetItem = getTargetItem(for: destination)
+
+        if LayoutDiagnostics.isEnabled {
+            let itemFrame = Bridging.getWindowFrame(for: item.windowID)
+            let targetFrame = Bridging.getWindowFrame(for: targetItem.windowID)
+            LayoutDiagnostics.appendText(
+                "[move-release] item wid=\(item.windowID) at \(itemFrame.map(String.init(describing:)) ?? "<nil>") | target wid=\(targetItem.windowID) at \(targetFrame.map(String.init(describing:)) ?? "<nil>") | releasing at \(endPoint)"
+            )
+        }
 
         guard
             let mouseDownEvent = CGEvent.menuBarItemEvent(
