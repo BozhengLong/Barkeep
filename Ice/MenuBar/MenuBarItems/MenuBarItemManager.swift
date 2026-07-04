@@ -357,6 +357,9 @@ extension MenuBarItemManager {
                 alwaysHiddenControlItem: alwaysHiddenControlItem,
                 otherItems: items
             )
+            if let appState {
+                LayoutDiagnostics.dump(label: "cache-rebuilt", appState: appState)
+            }
         } catch {
             Logger.itemManager.error("Error enforcing control item order: \(error)")
             Logger.itemManager.debug("Clearing menu bar item cache")
