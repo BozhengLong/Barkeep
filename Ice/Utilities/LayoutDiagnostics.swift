@@ -46,14 +46,23 @@ enum LayoutDiagnostics {
         // One line per item, in window list order, with cached section when known.
         let items = MenuBarItem.getMenuBarItems(onScreenOnly: false, activeSpaceOnly: true)
         let cache = appState.itemManager.itemCache
-        for (index, item) in items.enumerated() {
-            let section: String? = cache.section(for: item).map { name in
-                switch name {
-                case .visible: "visible"
-                case .hidden: "hidden"
-                case .alwaysHidden: "alwaysHidden"
-                }
+
+        // Section lookup keyed by windowID: info-based lookup collides on
+        // Tahoe, where many items share the "Item-0" info.
+        var sectionsByWindowID = [CGWindowID: String]()
+        for name in MenuBarSection.Name.allCases {
+            let label = switch name {
+            case .visible: "visible"
+            case .hidden: "hidden"
+            case .alwaysHidden: "alwaysHidden"
             }
+            for cachedItem in cache[name] {
+                sectionsByWindowID[cachedItem.windowID] = label
+            }
+        }
+
+        for (index, item) in items.enumerated() {
+            let section = sectionsByWindowID[item.windowID]
             lines.append(formatItemLine(
                 windowID: item.windowID,
                 title: item.title,
