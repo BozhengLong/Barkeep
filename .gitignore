@@ -3,3 +3,7 @@ build/
 xcuserdata/
 DerivedData/
 *.xcuserstate
+
+# Local-only Claude Code / dev context — never publish
+.context/
+.claude/settings.local.json

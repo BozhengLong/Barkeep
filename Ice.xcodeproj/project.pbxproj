@@ -26,7 +26,7 @@
 
 /* Begin PBXFileReference section */
 		2FB013AC2FF7FE5100F98945 /* IceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		7166832A2A767E6A006ABF84 /* Ice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ice.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7166832A2A767E6A006ABF84 /* Barkeep.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Barkeep.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -80,7 +80,7 @@
 		7166832B2A767E6A006ABF84 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				7166832A2A767E6A006ABF84 /* Ice.app */,
+				7166832A2A767E6A006ABF84 /* Barkeep.app */,
 				2FB013AC2FF7FE5100F98945 /* IceTests.xctest */,
 			);
 			name = Products;
@@ -137,7 +137,7 @@
 				7127A9FE2C4886D100D99DEF /* IfritStatic */,
 			);
 			productName = Ice;
-			productReference = 7166832A2A767E6A006ABF84 /* Ice.app */;
+			productReference = 7166832A2A767E6A006ABF84 /* Barkeep.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
