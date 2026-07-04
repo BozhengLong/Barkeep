@@ -31,12 +31,21 @@ extension View {
                                     .blendMode(.softLight)
                             )
                     case .desktopWallpaper:
-                        Color(cgColor: averageColorInfo.color)
-                            .overlay(
-                                Material.bar
-                                    .opacity(0.5)
-                                    .blendMode(.softLight)
-                            )
+                        // On macOS 26 the menu bar is a dark translucent overlay
+                        // and does not show the wallpaper color directly — icons
+                        // are white template glyphs, so painting the (often light)
+                        // wallpaper average behind them renders them invisible.
+                        // Keep the dark base instead.
+                        if #available(macOS 26.0, *) {
+                            EmptyView()
+                        } else {
+                            Color(cgColor: averageColorInfo.color)
+                                .overlay(
+                                    Material.bar
+                                        .opacity(0.5)
+                                        .blendMode(.softLight)
+                                )
+                        }
                     }
                 } else {
                     Color.defaultLayoutBar
