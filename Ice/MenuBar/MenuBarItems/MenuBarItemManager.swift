@@ -60,6 +60,14 @@ final class MenuBarItemManager: ObservableObject {
             return nil
         }
 
+        /// Returns the name of the section containing the item with the given window.
+        func section(forWindowID windowID: CGWindowID) -> MenuBarSection.Name? {
+            for (section, items) in self.items where items.contains(where: { $0.windowID == windowID }) {
+                return section
+            }
+            return nil
+        }
+
         /// Accesses the items in the given section.
         subscript(section: MenuBarSection.Name) -> [MenuBarItem] {
             get { items[section, default: []] }
@@ -286,8 +294,8 @@ extension MenuBarItemManager {
                     cache[.alwaysHidden].append(item)
                 default:
                     if
-                        let section = cache.section(for: targetItem),
-                        let index = cache[section].firstIndex(matching: targetItem.info)
+                        let section = cache.section(forWindowID: targetItem.windowID),
+                        let index = cache[section].firstIndex(where: { $0.windowID == targetItem.windowID })
                     {
                         let clampedIndex = index.clamped(to: cache[section].startIndex...cache[section].endIndex)
                         cache[section].insert(item, at: clampedIndex)
@@ -301,8 +309,8 @@ extension MenuBarItemManager {
                     cache[.hidden].insert(item, at: 0)
                 default:
                     if
-                        let section = cache.section(for: targetItem),
-                        let index = cache[section].firstIndex(matching: targetItem.info)
+                        let section = cache.section(forWindowID: targetItem.windowID),
+                        let index = cache[section].firstIndex(where: { $0.windowID == targetItem.windowID })
                     {
                         let clampedIndex = (index - 1).clamped(to: cache[section].startIndex...cache[section].endIndex)
                         cache[section].insert(item, at: clampedIndex)
@@ -694,7 +702,7 @@ extension MenuBarItemManager {
         }
         // The gap must be exactly tiled by immovable items.
         let coveredWidth = gapItems.reduce(0) { $0 + $1.frame.width }
-        return gapItems.allSatisfy { !$0.isMovable } && coveredWidth == maxX - minX
+        return gapItems.allSatisfy { !$0.isMovable } && abs(coveredWidth - (maxX - minX)) < 0.5
     }
 
     /// Returns a Boolean value that indicates whether the given events have the
@@ -1211,6 +1219,7 @@ extension MenuBarItemManager {
                     if try await self.itemHasCorrectPosition(item: item, for: destination) {
                         return
                     }
+                    try await Task.sleep(for: .milliseconds(20))
                 }
             }
             do {
