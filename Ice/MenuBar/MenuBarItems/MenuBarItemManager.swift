@@ -603,15 +603,17 @@ extension MenuBarItemManager {
             guard let currentFrame = getCurrentFrame(for: targetItem) else {
                 throw EventError(code: .invalidItem, item: targetItem)
             }
-            // DEBUG PROBE (Tahoe insertion boundary): releasing at exactly minX
-            // lands the item on the target's RIGHT on macOS 26. Testing whether
-            // a 1px-left release flips it to the correct side.
+            // On macOS 26 (Tahoe), a drop released at exactly the target's edge
+            // is resolved to the WRONG side of the target (verified 2026-07-04:
+            // release at minX landed the item adjacent on the right). Releasing
+            // 1pt past the edge resolves to the intended side on both old and
+            // new systems.
             return CGPoint(x: currentFrame.minX - 1, y: currentFrame.midY)
         case .rightOfItem(let targetItem):
             guard let currentFrame = getCurrentFrame(for: targetItem) else {
                 throw EventError(code: .invalidItem, item: targetItem)
             }
-            return CGPoint(x: currentFrame.maxX, y: currentFrame.midY)
+            return CGPoint(x: currentFrame.maxX + 1, y: currentFrame.midY)
         }
     }
 
